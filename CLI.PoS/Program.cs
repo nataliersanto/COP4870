@@ -855,39 +855,34 @@ namespace CLI.PoS
             var student = StudentServiceProxy.Current.GetById(id);
             if (student == null) { Console.WriteLine("Student not found."); return; }
 
+            var enrolledCourses = CourseServiceProxy.Current.Courses
+                .Where(c => c.Roster.Any(s => s.Id == student.Id)).ToList();
+
+            if (!enrolledCourses.Any())
+            {
+                Console.WriteLine("You are not enrolled in any courses.");
+                return;
+            }
+
             var choice = string.Empty;
             do
             {
                 Console.WriteLine($"\n=== Welcome, {student.Name} ===");
-                var enrolledCourses = CourseServiceProxy.Current.Courses
-                    .Where(c => c.Roster.Any(s => s.Id == student.Id)).ToList();
-
-                if (!enrolledCourses.Any())
-                {
-                    Console.WriteLine("You are not enrolled in any courses.");
-                    return;
-                }
-
                 enrolledCourses.ForEach(Console.WriteLine);
-                Console.WriteLine("S. Select Course");
-                Console.WriteLine("Q. Back");
+                Console.Write("Enter Course ID (or Q to back): ");
                 choice = Console.ReadLine();
 
-                switch (choice?.ToUpper())
+                if (choice?.ToUpper() == "Q") break;
+
+                if (int.TryParse(choice, out int courseId))
                 {
-                    case "S":
-                        Console.Write("Enter Course ID: ");
-                        if (int.TryParse(Console.ReadLine(), out int courseId))
-                        {
-                            var course = enrolledCourses.FirstOrDefault(c => c.Id == courseId);
-                            if (course != null) StudentCourseMenu(student, course);
-                            else Console.WriteLine("Course not found.");
-                        }
-                        break;
-                    case "Q":
-                        break;
+                    var course = enrolledCourses.FirstOrDefault(c => c.Id == courseId);
+                    if (course != null)
+                        StudentCourseMenu(student, course);
+                    else
+                        Console.WriteLine("Course not found.");
                 }
-            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+            } while (true);
         }
 
         static void StudentCourseMenu(Student student, Course course)
