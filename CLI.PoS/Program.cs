@@ -321,6 +321,10 @@ namespace CLI.PoS
                 Console.WriteLine("3. Manage Modules");
                 Console.WriteLine("4. Grade Submissions");
                 Console.WriteLine("5. Manage Assignment Groups");
+                Console.WriteLine("6. Manage Grade Ranges");
+                Console.WriteLine("7. Export Gradebook (CSV)");
+                Console.WriteLine("8. Export Assignments");
+                Console.WriteLine("9. Import Assignments");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -340,6 +344,18 @@ namespace CLI.PoS
                         break;
                     case "5":
                         ManageAssignmentGroups(course);
+                        break;
+                    case "6":
+                        ManageGradeRanges(course);
+                        break;
+                    case "7":
+                        ExportGradebook(course);
+                        break;
+                    case "8":
+                        ExportAssignments(course);
+                        break;
+                    case "9":
+                        ImportAssignments(course);
                         break;
                     case "Q":
                         break;
@@ -459,6 +475,9 @@ namespace CLI.PoS
 
         static void CreateAssignment(Course course)
         {
+            Console.Write("Is this a Quiz? (Y/N): ");
+            var isQuiz = Console.ReadLine()?.ToUpper() == "Y";
+
             Console.Write("Assignment Name: ");
             var name = Console.ReadLine();
             Console.Write("Description: ");
@@ -474,10 +493,30 @@ namespace CLI.PoS
                 Name = name,
                 Description = desc,
                 AvailablePoints = points,
-                DueDate = due
+                DueDate = due,
+                IsQuiz = isQuiz
             };
+
+            if (isQuiz)
+            {
+                var qChoice = string.Empty;
+                do
+                {
+                    Console.WriteLine("\nQuiz Questions:");
+                    assignment.Questions.Select((q, i) => $"{i + 1}. {q}").ToList().ForEach(Console.WriteLine);
+                    Console.WriteLine("A. Add Question");
+                    Console.WriteLine("Q. Done");
+                    qChoice = Console.ReadLine();
+                    if (qChoice?.ToUpper() == "A")
+                    {
+                        Console.Write("Question: ");
+                        assignment.Questions.Add(Console.ReadLine() ?? "");
+                    }
+                } while (!qChoice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+            }
+
             course.Assignments.Add(assignment);
-            Console.WriteLine($"Assignment created: {assignment}");
+            Console.WriteLine($"Created: {assignment}");
         }
 
         static void EditAssignment(Course course)
@@ -617,6 +656,94 @@ namespace CLI.PoS
                 Console.Write("Feedback: ");
                 s.Feedback = Console.ReadLine();
             });
+        }
+        
+        
+        
+        static void ExportGradebook(Course course)
+        {
+            Console.WriteLine($"\n=== Export Gradebook: {course.Name} ===");
+
+            var sb = new System.Text.StringBuilder();
+
+            //header
+            sb.Append("Student Name,FSUID");
+            foreach (var assignment in course.Assignments)
+                sb.Append($",{assignment.Name} ({assignment.AvailablePoints} pts)");
+            sb.AppendLine(",Average,Letter Grade");
+
+            //student
+            foreach (var student in course.Roster)
+            {
+                sb.Append($"{student.Name},{student.Code}");
+                var totalScore = 0.0;
+                var totalPoints = 0;
+
+                foreach (var assignment in course.Assignments)
+                {
+                    var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.Id);
+                    var grade = submission?.Grade?.ToString() ?? "N/A";
+                    sb.Append($",{grade}");
+                    if (submission?.Grade != null)
+                    {
+                        totalScore += submission.Grade.Value;
+                        totalPoints += assignment.AvailablePoints;
+                    }
+                }
+
+                if (totalPoints > 0)
+                {
+                    double avg = totalScore / totalPoints * 100;
+                    string letter = course.GetLetterGrade(avg);
+                    sb.AppendLine($",{avg:F1}%,{letter}");
+                }
+                else
+                {
+                    sb.AppendLine(",N/A,N/A");
+                }
+            }
+
+            //save to file
+            var fileName = $"{course.Code}_gradebook.csv";
+            File.WriteAllText(fileName, sb.ToString());
+            Console.WriteLine($"Gradebook exported to {fileName}");
+        }
+        
+        static void ExportAssignments(Course course)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Id,Name,Description,AvailablePoints,DueDate,IsQuiz");
+            foreach (var a in course.Assignments)
+                sb.AppendLine($"{a.Id},{a.Name},{a.Description},{a.AvailablePoints},{a.DueDate:MM/dd/yyyy},{a.IsQuiz}");
+
+            var fileName = $"{course.Code}_assignments.csv";
+            File.WriteAllText(fileName, sb.ToString());
+            Console.WriteLine($"Assignments exported to {fileName}");
+        }
+        
+        static void ImportAssignments(Course course)
+        {
+            Console.Write("Enter path to assignments CSV file: ");
+            var filePath = Console.ReadLine();
+            if (!File.Exists(filePath)) { Console.WriteLine("File not found."); return; }
+
+            var lines = File.ReadAllLines(filePath).Skip(1); // skip header
+            foreach (var line in lines)
+            {
+                var parts = line.Split(',');
+                if (parts.Length < 6) continue;
+                var assignment = new Assignment
+                {
+                    Id = course.Assignments.Any() ? course.Assignments.Max(a => a.Id) + 1 : 1,
+                    Name = parts[1],
+                    Description = parts[2],
+                    AvailablePoints = int.TryParse(parts[3], out int pts) ? pts : 0,
+                    DueDate = DateTime.TryParse(parts[4], out DateTime due) ? due : DateTime.Now,
+                    IsQuiz = parts[5].Trim().ToLower() == "true"
+                };
+                course.Assignments.Add(assignment);
+            }
+            Console.WriteLine("Assignments imported!");
         }
 
         static void ManageStudentsMenu()
@@ -786,16 +913,54 @@ namespace CLI.PoS
             var assignment = course.Assignments.FirstOrDefault(a => a.Id == id);
             if (assignment == null) { Console.WriteLine("Assignment not found."); return; }
 
-            Console.Write("Your submission: ");
-            var content = Console.ReadLine();
             var submission = new Submission
             {
                 Id = assignment.Submissions.Any() ? assignment.Submissions.Max(s => s.Id) + 1 : 1,
                 StudentId = student.Id,
                 AssignmentId = assignment.Id,
-                Content = content,
                 SubmissionDate = DateTime.Now
             };
+
+            if (assignment.IsQuiz)
+            {
+                Console.WriteLine("\n=== Quiz ===");
+                var answers = new System.Text.StringBuilder();
+                for (int i = 0; i < assignment.Questions.Count; i++)
+                {
+                    Console.WriteLine($"Q{i + 1}: {assignment.Questions[i]}");
+                    Console.Write("Your answer: ");
+                    answers.AppendLine($"Q{i + 1}: {Console.ReadLine()}");
+                }
+                submission.Content = answers.ToString();
+            }
+            else
+            {
+                Console.WriteLine("1. Text submission");
+                Console.WriteLine("2. File submission");
+                var choice = Console.ReadLine();
+
+                if (choice == "1")
+                {
+                    Console.Write("Your submission: ");
+                    submission.Content = Console.ReadLine();
+                }
+                else if (choice == "2")
+                {
+                    Console.Write("Enter file path: ");
+                    var filePath = Console.ReadLine();
+                    if (File.Exists(filePath))
+                    {
+                        submission.FilePath = filePath;
+                        Console.WriteLine("File attached!");
+                    }
+                    else
+                    {
+                        Console.WriteLine("File not found, saving path anyway.");
+                        submission.FilePath = filePath;
+                    }
+                }
+            }
+
             assignment.Submissions.Add(submission);
             Console.WriteLine("Submission recorded!");
         }
@@ -845,7 +1010,7 @@ namespace CLI.PoS
             }
             else
             {
-                // Simple average if no groups
+                // if no groups then j simple average 
                 var gradedSubmissions = course.Assignments
                     .Select(a => a.Submissions.FirstOrDefault(s => s.StudentId == student.Id))
                     .Where(s => s?.Grade != null).ToList();
