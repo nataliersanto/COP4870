@@ -10,8 +10,8 @@ namespace Library.PoS.Services
         {
             courses = new List<Course>
             {
-                new Course { Id = 1, Code = "COP4870", Name = "Mobile Development", Description = "Learn to build mobile apps" },
-                new Course { Id = 2, Code = "COP3330", Name = "Object Oriented Programming", Description = "Learn OOP concepts" }
+                new Course { Id = 1, Code = "COP4870", Name = "Mobile Development", Description = "Learn to build mobile apps", Semester = "Fall 2024", Section = "1" },
+                new Course { Id = 2, Code = "COP3330", Name = "Object Oriented Programming", Description = "Learn OOP concepts", Semester = "Fall 2024", Section = "2" }
             };
         }
 

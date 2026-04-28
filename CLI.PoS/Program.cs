@@ -76,6 +76,7 @@ namespace CLI.PoS
                 Console.WriteLine("U. Edit Course");
                 Console.WriteLine("D. Delete Course");
                 Console.WriteLine("S. Select Course");
+                Console.WriteLine("X. Copy Course");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -96,6 +97,9 @@ namespace CLI.PoS
                     case "S":
                         SelectCourse();
                         break;
+                    case "X":
+                        CopyCourse();
+                        break;
                     case "Q":
                         break;
                     default:
@@ -114,12 +118,18 @@ namespace CLI.PoS
             var code = Console.ReadLine();
             Console.Write("Description: ");
             var description = Console.ReadLine();
+            Console.Write("Semester (e.g. Fall 2024): ");
+            var semester = Console.ReadLine();
+            Console.Write("Section: ");
+            var section = Console.ReadLine();
 
             var course = new Course
             {
                 Name = name,
                 Code = code,
-                Description = description
+                Description = description,
+                Semester = semester,
+                Section = section
             };
             CourseServiceProxy.Current.AddOrUpdate(course);
             Console.WriteLine($"Course created: {course}");
@@ -127,14 +137,19 @@ namespace CLI.PoS
 
         static void ListCourses()
         {
-            Console.WriteLine("\n=== Courses ===");
+            Console.WriteLine("\n=== Courses by Semester ===");
             var courses = CourseServiceProxy.Current.Courses;
             if (!courses.Any())
             {
                 Console.WriteLine("No courses found.");
                 return;
             }
-            courses.ForEach(Console.WriteLine);
+            var bySemester = courses.GroupBy(c => c.Semester ?? "Unknown");
+            foreach (var group in bySemester)
+            {
+                Console.WriteLine($"\n--- {group.Key} ---");
+                group.ToList().ForEach(Console.WriteLine);
+            }
         }
 
         static void EditCourse()
@@ -166,7 +181,125 @@ namespace CLI.PoS
             var deleted = CourseServiceProxy.Current.Delete(id);
             Console.WriteLine(deleted != null ? $"Deleted: {deleted.Name}" : "Course not found.");
         }
+        
+        static void CopyCourse()
+        {
+            ListCourses();
+            Console.Write("Enter Course ID to copy: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var original = CourseServiceProxy.Current.GetById(id);
+            if (original == null) { Console.WriteLine("Course not found."); return; }
 
+            var copy = new Course
+            {
+                Name = original.Name + " (Copy)",
+                Code = original.Code,
+                Description = original.Description,
+                Semester = original.Semester,
+                Section = original.Section,
+                Modules = original.Modules.Select(m => new Module
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    Content = new List<string>(m.Content)
+                }).ToList(),
+                Assignments = original.Assignments.Select(a => new Assignment
+                {
+                    Id = a.Id,
+                    Name = a.Name,
+                    Description = a.Description,
+                    AvailablePoints = a.AvailablePoints,
+                    DueDate = a.DueDate,
+                    Submissions = new List<Submission>() // don't copy submissions
+                }).ToList()
+            };
+            CourseServiceProxy.Current.AddOrUpdate(copy);
+            Console.WriteLine($"Course copied: {copy}");
+        }
+        
+        static void ManageAssignmentGroups(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Assignment Groups: {course.Name} ===");
+                Console.WriteLine("C. Create Group");
+                Console.WriteLine("R. List Groups");
+                Console.WriteLine("U. Edit Group");
+                Console.WriteLine("D. Delete Group");
+                Console.WriteLine("A. Add Assignment to Group");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "C":
+                        Console.Write("Group Name: ");
+                        var name = Console.ReadLine();
+                        Console.Write("Weight (e.g. 0.4 for 40%): ");
+                        double.TryParse(Console.ReadLine(), out double weight);
+                        var group = new AssignmentGroup
+                        {
+                            Id = course.AssignmentGroups.Any() ? course.AssignmentGroups.Max(g => g.Id) + 1 : 1,
+                            Name = name,
+                            Weight = weight
+                        };
+                    course.AssignmentGroups.Add(group);
+                    Console.WriteLine($"Group created: {group}");
+                    break;
+                    case "R":
+                        course.AssignmentGroups.ForEach(Console.WriteLine);
+                        break;
+                    case "U":
+                        course.AssignmentGroups.ForEach(Console.WriteLine);
+                        Console.Write("Enter Group ID to edit: ");
+                        if (int.TryParse(Console.ReadLine(), out int editId))
+                        {
+                            var g = course.AssignmentGroups.FirstOrDefault(g => g.Id == editId);
+                            if (g != null)
+                            {
+                                Console.Write($"New Name ({g.Name}): ");
+                                var newName = Console.ReadLine();
+                                if (!string.IsNullOrEmpty(newName)) g.Name = newName;
+                               Console.Write($"New Weight ({g.Weight:P0}): ");
+                               if (double.TryParse(Console.ReadLine(), out double newWeight)) g.Weight = newWeight;
+                               Console.WriteLine("Group updated!");
+                            }
+                        }
+                        break;
+                    case "D":
+                        course.AssignmentGroups.ForEach(Console.WriteLine);
+                        Console.Write("Enter Group ID to delete: ");
+                        if (int.TryParse(Console.ReadLine(), out int delId))
+                        {
+                            var g = course.AssignmentGroups.FirstOrDefault(g => g.Id == delId);
+                            if (g != null) { course.AssignmentGroups.Remove(g); Console.WriteLine("Deleted."); }
+                        }
+                        break;
+                    case "A":
+                        course.AssignmentGroups.ForEach(Console.WriteLine);
+                        Console.Write("Enter Group ID: ");
+                        if (int.TryParse(Console.ReadLine(), out int groupId))
+                        {
+                            var g = course.AssignmentGroups.FirstOrDefault(g => g.Id == groupId);
+                            if (g != null)
+                            {
+                                course.Assignments.ForEach(Console.WriteLine);
+                                Console.Write("Enter Assignment ID to add: ");
+                                if (int.TryParse(Console.ReadLine(), out int aId))
+                                {
+                                    var a = course.Assignments.FirstOrDefault(a => a.Id == aId);
+                                    if (a != null) { g.Assignments.Add(a); Console.WriteLine($"Added {a.Name} to {g.Name}"); }
+                                }
+                            }
+                        }
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+        
         static void SelectCourse()
         {
             ListCourses();
@@ -187,6 +320,7 @@ namespace CLI.PoS
                 Console.WriteLine("2. Manage Assignments");
                 Console.WriteLine("3. Manage Modules");
                 Console.WriteLine("4. Grade Submissions");
+                Console.WriteLine("5. Manage Assignment Groups");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -203,6 +337,9 @@ namespace CLI.PoS
                         break;
                     case "4":
                         GradeSubmissions(course);
+                        break;
+                    case "5":
+                        ManageAssignmentGroups(course);
                         break;
                     case "Q":
                         break;
@@ -666,6 +803,7 @@ namespace CLI.PoS
         static void ViewGrades(Student student, Course course)
         {
             Console.WriteLine($"\n=== Your Grades in {course.Name} ===");
+    
             foreach (var assignment in course.Assignments)
             {
                 var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.Id);
@@ -673,6 +811,51 @@ namespace CLI.PoS
                     Console.WriteLine($"{assignment.Name}: {submission.Grade}/{assignment.AvailablePoints}");
                 else
                     Console.WriteLine($"{assignment.Name}: Not graded yet");
+            }
+            
+            //weighted average
+            if (course.AssignmentGroups.Any())
+            {
+                Console.WriteLine("\n=== Weighted Grade ===");
+                double totalWeight = 0;
+                double weightedScore = 0;
+
+                foreach (var group in course.AssignmentGroups)
+                {
+                    var groupAssignments = group.Assignments;
+                    if (!groupAssignments.Any()) continue;
+
+                    var groupScores = groupAssignments.Select(a =>
+                    {
+                        var sub = a.Submissions.FirstOrDefault(s => s.StudentId == student.Id);
+                        return sub?.Grade != null ? (double)sub.Grade / a.AvailablePoints : 0.0;
+                    });
+
+                    double groupAvg = groupScores.Average();
+                    weightedScore += groupAvg * group.Weight;
+                    totalWeight += group.Weight;
+                    Console.WriteLine($"{group.Name}: {groupAvg:P1} (weight: {group.Weight:P0})");
+                }
+                
+                if (totalWeight > 0)
+                {
+                    double finalGrade = weightedScore / totalWeight * 100;
+                    Console.WriteLine($"\nFinal Grade: {finalGrade:F1}%");
+                }
+            }
+            else
+            {
+                // Simple average if no groups
+                var gradedSubmissions = course.Assignments
+                    .Select(a => a.Submissions.FirstOrDefault(s => s.StudentId == student.Id))
+                    .Where(s => s?.Grade != null).ToList();
+
+                if (gradedSubmissions.Any())
+                {
+                    double avg = gradedSubmissions.Average(s =>
+                        (double)s!.Grade! / course.Assignments.First(a => a.Id == s.AssignmentId).AvailablePoints * 100);
+                    Console.WriteLine($"\nCurrent Average: {avg:F1}%");
+                }
             }
         }
     }
