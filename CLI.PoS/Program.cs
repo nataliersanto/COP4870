@@ -1,120 +1,679 @@
-﻿using CLI.PoS;
-using CLI.PoS.Model;
+﻿using Library.PoS.Model;
 using Library.PoS.Services;
-using System;
 
-namespace MyApp
+namespace CLI.PoS
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            var list = ItemServiceProxy.Current.Items;
             var choice = string.Empty;
             do
             {
-                Console.WriteLine("Choose one of the following:");
-                Console.WriteLine("1. Administrator");
-                Console.WriteLine("2. User");
+                Console.WriteLine("\n=== Learning Management System ===");
+                Console.WriteLine("1. Teacher");
+                Console.WriteLine("2. Student");
                 Console.WriteLine("3. Quit");
 
                 choice = Console.ReadLine();
                 if (int.TryParse(choice, out int choiceInt))
                 {
-                    var subChoice = string.Empty;
-                    do
+                    switch (choiceInt)
                     {
-                        switch (choiceInt)
+                        case 1:
+                            TeacherMenu();
+                            break;
+                        case 2:
+                            StudentMenu();
+                            break;
+                        case 3:
+                            Console.WriteLine("Goodbye!");
+                            break;
+                        default:
+                            Console.WriteLine("Invalid choice.");
+                            break;
+                    }
+                }
+            } while (!choice.Equals("3", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void TeacherMenu()
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine("\n=== Teacher Menu ===");
+                Console.WriteLine("1. Manage Courses");
+                Console.WriteLine("2. Manage Students");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "1":
+                        ManageCoursesMenu();
+                        break;
+                    case "2":
+                        ManageStudentsMenu();
+                        break;
+                    case "Q":
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice.");
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void ManageCoursesMenu()
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine("\n=== Manage Courses ===");
+                Console.WriteLine("C. Create Course");
+                Console.WriteLine("R. List Courses");
+                Console.WriteLine("U. Edit Course");
+                Console.WriteLine("D. Delete Course");
+                Console.WriteLine("S. Select Course");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "C":
+                        CreateCourse();
+                        break;
+                    case "R":
+                        ListCourses();
+                        break;
+                    case "U":
+                        EditCourse();
+                        break;
+                    case "D":
+                        DeleteCourse();
+                        break;
+                    case "S":
+                        SelectCourse();
+                        break;
+                    case "Q":
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice.");
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void CreateCourse()
+        {
+            Console.WriteLine("\n=== Create Course ===");
+            Console.Write("Course Name: ");
+            var name = Console.ReadLine();
+            Console.Write("Course Code: ");
+            var code = Console.ReadLine();
+            Console.Write("Description: ");
+            var description = Console.ReadLine();
+
+            var course = new Course
+            {
+                Name = name,
+                Code = code,
+                Description = description
+            };
+            CourseServiceProxy.Current.AddOrUpdate(course);
+            Console.WriteLine($"Course created: {course}");
+        }
+
+        static void ListCourses()
+        {
+            Console.WriteLine("\n=== Courses ===");
+            var courses = CourseServiceProxy.Current.Courses;
+            if (!courses.Any())
+            {
+                Console.WriteLine("No courses found.");
+                return;
+            }
+            courses.ForEach(Console.WriteLine);
+        }
+
+        static void EditCourse()
+        {
+            ListCourses();
+            Console.Write("Enter Course ID to edit: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+
+            var course = CourseServiceProxy.Current.GetById(id);
+            if (course == null) { Console.WriteLine("Course not found."); return; }
+
+            Console.Write($"New Name ({course.Name}): ");
+            var name = Console.ReadLine();
+            if (!string.IsNullOrEmpty(name)) course.Name = name;
+
+            Console.Write($"New Description ({course.Description}): ");
+            var desc = Console.ReadLine();
+            if (!string.IsNullOrEmpty(desc)) course.Description = desc;
+
+            CourseServiceProxy.Current.AddOrUpdate(course);
+            Console.WriteLine("Course updated!");
+        }
+
+        static void DeleteCourse()
+        {
+            ListCourses();
+            Console.Write("Enter Course ID to delete: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var deleted = CourseServiceProxy.Current.Delete(id);
+            Console.WriteLine(deleted != null ? $"Deleted: {deleted.Name}" : "Course not found.");
+        }
+
+        static void SelectCourse()
+        {
+            ListCourses();
+            Console.Write("Enter Course ID to manage: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var course = CourseServiceProxy.Current.GetById(id);
+            if (course == null) { Console.WriteLine("Course not found."); return; }
+            CourseDetailMenu(course);
+        }
+
+        static void CourseDetailMenu(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== {course.Name} ({course.Code}) ===");
+                Console.WriteLine("1. Manage Roster");
+                Console.WriteLine("2. Manage Assignments");
+                Console.WriteLine("3. Manage Modules");
+                Console.WriteLine("4. Grade Submissions");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "1":
+                        ManageRoster(course);
+                        break;
+                    case "2":
+                        ManageAssignments(course);
+                        break;
+                    case "3":
+                        ManageModules(course);
+                        break;
+                    case "4":
+                        GradeSubmissions(course);
+                        break;
+                    case "Q":
+                        break;
+                    default:
+                        Console.WriteLine("Invalid choice.");
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void ManageRoster(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Roster: {course.Name} ===");
+                Console.WriteLine("A. Add Student");
+                Console.WriteLine("R. List Students");
+                Console.WriteLine("D. Remove Student");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "A":
+                        EnrollStudent(course);
+                        break;
+                    case "R":
+                        course.Roster.ForEach(Console.WriteLine);
+                        break;
+                    case "D":
+                        UnenrollStudent(course);
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void EnrollStudent(Course course)
+        {
+            Console.WriteLine("\nAll Students:");
+            StudentServiceProxy.Current.Students.ForEach(Console.WriteLine);
+            Console.Write("Enter Student ID to enroll (or 0 to create new): ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+
+            Student? student;
+            if (id == 0)
+            {
+                Console.Write("Name: ");
+                var name = Console.ReadLine();
+                Console.Write("FSUID: ");
+                var code = Console.ReadLine();
+                Console.Write("Classification: ");
+                var classification = Console.ReadLine();
+                student = new Student { Name = name, Code = code, Classification = classification };
+                StudentServiceProxy.Current.AddOrUpdate(student);
+            }
+            else
+            {
+                student = StudentServiceProxy.Current.GetById(id);
+            }
+
+            if (student == null) { Console.WriteLine("Student not found."); return; }
+            if (course.Roster.Any(s => s.Id == student.Id))
+            {
+                Console.WriteLine("Student already enrolled.");
+                return;
+            }
+            course.Roster.Add(student);
+            Console.WriteLine($"Enrolled {student.Name} in {course.Name}");
+        }
+
+        static void UnenrollStudent(Course course)
+        {
+            course.Roster.ForEach(Console.WriteLine);
+            Console.Write("Enter Student ID to remove: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var student = course.Roster.FirstOrDefault(s => s.Id == id);
+            if (student == null) { Console.WriteLine("Student not found in roster."); return; }
+            course.Roster.Remove(student);
+            Console.WriteLine($"Removed {student.Name} from {course.Name}");
+        }
+
+        static void ManageAssignments(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Assignments: {course.Name} ===");
+                Console.WriteLine("C. Create Assignment");
+                Console.WriteLine("R. List Assignments");
+                Console.WriteLine("U. Edit Assignment");
+                Console.WriteLine("D. Delete Assignment");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "C":
+                        CreateAssignment(course);
+                        break;
+                    case "R":
+                        course.Assignments.ForEach(Console.WriteLine);
+                        break;
+                    case "U":
+                        EditAssignment(course);
+                        break;
+                    case "D":
+                        DeleteAssignment(course);
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void CreateAssignment(Course course)
+        {
+            Console.Write("Assignment Name: ");
+            var name = Console.ReadLine();
+            Console.Write("Description: ");
+            var desc = Console.ReadLine();
+            Console.Write("Available Points: ");
+            int.TryParse(Console.ReadLine(), out int points);
+            Console.Write("Due Date (MM/DD/YYYY): ");
+            DateTime.TryParse(Console.ReadLine(), out DateTime due);
+
+            var assignment = new Assignment
+            {
+                Id = course.Assignments.Any() ? course.Assignments.Max(a => a.Id) + 1 : 1,
+                Name = name,
+                Description = desc,
+                AvailablePoints = points,
+                DueDate = due
+            };
+            course.Assignments.Add(assignment);
+            Console.WriteLine($"Assignment created: {assignment}");
+        }
+
+        static void EditAssignment(Course course)
+        {
+            course.Assignments.ForEach(Console.WriteLine);
+            Console.Write("Enter Assignment ID to edit: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var assignment = course.Assignments.FirstOrDefault(a => a.Id == id);
+            if (assignment == null) { Console.WriteLine("Not found."); return; }
+
+            Console.Write($"New Name ({assignment.Name}): ");
+            var name = Console.ReadLine();
+            if (!string.IsNullOrEmpty(name)) assignment.Name = name;
+
+            Console.Write($"New Description ({assignment.Description}): ");
+            var desc = Console.ReadLine();
+            if (!string.IsNullOrEmpty(desc)) assignment.Description = desc;
+
+            Console.WriteLine("Assignment updated!");
+        }
+
+        static void DeleteAssignment(Course course)
+        {
+            course.Assignments.ForEach(Console.WriteLine);
+            Console.Write("Enter Assignment ID to delete: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var assignment = course.Assignments.FirstOrDefault(a => a.Id == id);
+            if (assignment == null) { Console.WriteLine("Not found."); return; }
+            course.Assignments.Remove(assignment);
+            Console.WriteLine("Assignment deleted.");
+        }
+
+        static void ManageModules(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Modules: {course.Name} ===");
+                Console.WriteLine("C. Create Module");
+                Console.WriteLine("R. List Modules");
+                Console.WriteLine("D. Delete Module");
+                Console.WriteLine("S. Select Module to manage content");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "C":
+                        var m = new Module
                         {
-                            case 1:
-                                Console.WriteLine("Admin Menu");
-                                Console.WriteLine("C. Create New Menu Item");
-                                Console.WriteLine("R. List All Menu Items");
-                                Console.WriteLine("U. Edit Menu Item");
-                                Console.WriteLine("D. Delete Menu Item");
-                                Console.WriteLine("Q. Quit");
-
-                                subChoice = Console.ReadLine();
-                                if (subChoice.Equals("C", StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    Console.WriteLine("Name:");
-                                    var name = Console.ReadLine();
-                                    Console.WriteLine("Description:");
-                                    var description = Console.ReadLine();
-
-                                    Console.WriteLine("Price:");
-                                    var price = Console.ReadLine();
-
-                                    var item = new Item
-                                    {
-                                        Name = name,
-                                        Description = description,
-                                        Price = decimal.Parse(price)
-                                    };
-                                    ItemServiceProxy.Current.AddOrUpdate(item);
-
-                                    Console.WriteLine(item);
-                                }
-                                else if (subChoice.Equals("R", StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    list.ForEach(Console.WriteLine);
-                                }
-                                else if (subChoice.Equals("U", StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    //display the items in their current state
-                                    list.ForEach(Console.WriteLine);
-
-                                    //let a user choose which one to update
-                                    var editChoice = int.Parse(Console.ReadLine() ?? "0");
-                                    var itemToEdit = list.FirstOrDefault(i => i.Id == editChoice);
-
-                                    if (itemToEdit != null)
-                                    {
-                                        //make the update
-                                        Console.WriteLine("New Name:");
-                                        var newName = Console.ReadLine();
-                                        if (!string.IsNullOrEmpty(newName))
-                                        {
-                                            itemToEdit.Name = newName;
-                                        }
-                                        Console.WriteLine("New Price:");
-                                        var newPrice = Console.ReadLine();
-                                        if (!string.IsNullOrEmpty(newPrice))
-                                        {
-                                            itemToEdit.Price = decimal.Parse(newPrice);
-                                        }
-
-
-                                        ItemServiceProxy.Current.AddOrUpdate(itemToEdit);
-                                    }
-                                }
-                                else if (subChoice.Equals("D", StringComparison.InvariantCultureIgnoreCase)) {
-                                    //display the items in their current state
-                                    list.ForEach(Console.WriteLine);
-
-                                    //let a user choose which one to update
-                                    var editChoice = int.Parse(Console.ReadLine() ?? "0");
-                                    var itemToDelete = list.FirstOrDefault(i => i.Id == editChoice);
-
-                                    ItemServiceProxy.Current.Delete(itemToDelete);
-                                }
-                                break;
-                            case 2:
-                                Console.WriteLine("User Menu");
-                                break;
-                            case 3:
-                                break;
-                            default:
-                                Console.WriteLine("ERROR: Unknown User Type");
-                                break;
+                            Id = course.Modules.Any() ? course.Modules.Max(m => m.Id) + 1 : 1
+                        };
+                        Console.Write("Module Name: ");
+                        m.Name = Console.ReadLine();
+                        course.Modules.Add(m);
+                        Console.WriteLine($"Module created: {m}");
+                        break;
+                    case "R":
+                        course.Modules.ForEach(Console.WriteLine);
+                        break;
+                    case "D":
+                        course.Modules.ForEach(Console.WriteLine);
+                        Console.Write("Enter Module ID to delete: ");
+                        if (int.TryParse(Console.ReadLine(), out int delId))
+                        {
+                            var mod = course.Modules.FirstOrDefault(m => m.Id == delId);
+                            if (mod != null) { course.Modules.Remove(mod); Console.WriteLine("Deleted."); }
                         }
-                    } while (!subChoice.Equals("Q", StringComparison.InvariantCultureIgnoreCase)
-                            && choiceInt != 3
-                        );
+                        break;
+                    case "S":
+                        course.Modules.ForEach(Console.WriteLine);
+                        Console.Write("Enter Module ID: ");
+                        if (int.TryParse(Console.ReadLine(), out int selId))
+                        {
+                            var mod = course.Modules.FirstOrDefault(m => m.Id == selId);
+                            if (mod != null) ManageModuleContent(mod);
+                        }
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void ManageModuleContent(Module module)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Module: {module.Name} ===");
+                module.Content.Select((c, i) => $"{i + 1}. {c}").ToList().ForEach(Console.WriteLine);
+                Console.WriteLine("A. Add Content");
+                Console.WriteLine("U. Update Content");
+                Console.WriteLine("D. Remove Content");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "A":
+                        Console.Write("Content: ");
+                        module.Content.Add(Console.ReadLine() ?? "");
+                        break;
+                    case "U":
+                        Console.Write("Content number to update: ");
+                        if (int.TryParse(Console.ReadLine(), out int idx) && idx > 0 && idx <= module.Content.Count)
+                        {
+                            Console.Write("New content: ");
+                            module.Content[idx - 1] = Console.ReadLine() ?? "";
+                        }
+                        break;
+                    case "D":
+                        Console.Write("Content number to remove: ");
+                        if (int.TryParse(Console.ReadLine(), out int dIdx) && dIdx > 0 && dIdx <= module.Content.Count)
+                            module.Content.RemoveAt(dIdx - 1);
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void GradeSubmissions(Course course)
+        {
+            Console.WriteLine($"\n=== Grade Submissions: {course.Name} ===");
+            var allSubmissions = course.Assignments.SelectMany(a => a.Submissions).ToList();
+            if (!allSubmissions.Any()) { Console.WriteLine("No submissions yet."); return; }
+
+            allSubmissions.ForEach(s =>
+            {
+                var student = StudentServiceProxy.Current.GetById(s.StudentId);
+                var assignment = course.Assignments.FirstOrDefault(a => a.Id == s.AssignmentId);
+                Console.WriteLine($"\nStudent: {student?.Name} | Assignment: {assignment?.Name}");
+                Console.WriteLine($"Content: {s.Content}");
+                Console.Write($"Enter grade (out of {assignment?.AvailablePoints}): ");
+                if (int.TryParse(Console.ReadLine(), out int grade)) s.Grade = grade;
+                Console.Write("Feedback: ");
+                s.Feedback = Console.ReadLine();
+            });
+        }
+
+        static void ManageStudentsMenu()
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine("\n=== Manage Students ===");
+                Console.WriteLine("C. Add Student");
+                Console.WriteLine("R. List Students");
+                Console.WriteLine("U. Edit Student");
+                Console.WriteLine("D. Delete Student");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "C":
+                        Console.Write("Name: ");
+                        var name = Console.ReadLine();
+                        Console.Write("FSUID: ");
+                        var code = Console.ReadLine();
+                        Console.Write("Classification: ");
+                        var classification = Console.ReadLine();
+                        var student = new Student { Name = name, Code = code, Classification = classification };
+                        StudentServiceProxy.Current.AddOrUpdate(student);
+                        Console.WriteLine($"Student added: {student}");
+                        break;
+                    case "R":
+                        StudentServiceProxy.Current.Students.ForEach(Console.WriteLine);
+                        break;
+                    case "U":
+                        StudentServiceProxy.Current.Students.ForEach(Console.WriteLine);
+                        Console.Write("Enter Student ID to edit: ");
+                        if (int.TryParse(Console.ReadLine(), out int editId))
+                        {
+                            var s = StudentServiceProxy.Current.GetById(editId);
+                            if (s != null)
+                            {
+                                Console.Write($"New Name ({s.Name}): ");
+                                var newName = Console.ReadLine();
+                                if (!string.IsNullOrEmpty(newName)) s.Name = newName;
+                                Console.Write($"New Classification ({s.Classification}): ");
+                                var newClass = Console.ReadLine();
+                                if (!string.IsNullOrEmpty(newClass)) s.Classification = newClass;
+                                StudentServiceProxy.Current.AddOrUpdate(s);
+                                Console.WriteLine("Student updated!");
+                            }
+                        }
+                        break;
+                    case "D":
+                        StudentServiceProxy.Current.Students.ForEach(Console.WriteLine);
+                        Console.Write("Enter Student ID to delete: ");
+                        if (int.TryParse(Console.ReadLine(), out int delId))
+                        {
+                            var deleted = StudentServiceProxy.Current.Delete(delId);
+                            // Also remove from all course rosters
+                            CourseServiceProxy.Current.Courses.ForEach(c =>
+                                c.Roster.RemoveAll(s => s.Id == delId));
+                            Console.WriteLine(deleted != null ? $"Deleted: {deleted.Name}" : "Not found.");
+                        }
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void StudentMenu()
+        {
+            Console.WriteLine("\n=== Student Menu ===");
+            Console.WriteLine("Select a student:");
+            StudentServiceProxy.Current.Students.ForEach(Console.WriteLine);
+            Console.Write("Enter Student ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+
+            var student = StudentServiceProxy.Current.GetById(id);
+            if (student == null) { Console.WriteLine("Student not found."); return; }
+
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Welcome, {student.Name} ===");
+                var enrolledCourses = CourseServiceProxy.Current.Courses
+                    .Where(c => c.Roster.Any(s => s.Id == student.Id)).ToList();
+
+                if (!enrolledCourses.Any())
+                {
+                    Console.WriteLine("You are not enrolled in any courses.");
+                    return;
                 }
 
+                enrolledCourses.ForEach(Console.WriteLine);
+                Console.WriteLine("S. Select Course");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
 
-            } while (!choice.Equals("3", StringComparison.OrdinalIgnoreCase));
+                switch (choice?.ToUpper())
+                {
+                    case "S":
+                        Console.Write("Enter Course ID: ");
+                        if (int.TryParse(Console.ReadLine(), out int courseId))
+                        {
+                            var course = enrolledCourses.FirstOrDefault(c => c.Id == courseId);
+                            if (course != null) StudentCourseMenu(student, course);
+                            else Console.WriteLine("Course not found.");
+                        }
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void StudentCourseMenu(Student student, Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== {course.Name} ({course.Code}) ===");
+                Console.WriteLine("1. View Modules");
+                Console.WriteLine("2. View Assignments");
+                Console.WriteLine("3. Submit Assignment");
+                Console.WriteLine("4. View My Grades");
+                Console.WriteLine("5. View Roster");
+                Console.WriteLine("6. View Schedule");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "1":
+                        course.Modules.ForEach(m =>
+                        {
+                            Console.WriteLine($"\n{m}");
+                            m.Content.ForEach(c => Console.WriteLine($"  - {c}"));
+                        });
+                        break;
+                    case "2":
+                        course.Assignments.ForEach(Console.WriteLine);
+                        break;
+                    case "3":
+                        SubmitAssignment(student, course);
+                        break;
+                    case "4":
+                        ViewGrades(student, course);
+                        break;
+                    case "5":
+                        course.Roster.ForEach(Console.WriteLine);
+                        break;
+                    case "6":
+                        Console.WriteLine("\n=== Schedule ===");
+                        course.Assignments.OrderBy(a => a.DueDate)
+                            .ToList().ForEach(a => Console.WriteLine($"{a.DueDate:MM/dd/yyyy} - {a.Name}"));
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+
+        static void SubmitAssignment(Student student, Course course)
+        {
+            course.Assignments.ForEach(Console.WriteLine);
+            Console.Write("Enter Assignment ID to submit: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var assignment = course.Assignments.FirstOrDefault(a => a.Id == id);
+            if (assignment == null) { Console.WriteLine("Assignment not found."); return; }
+
+            Console.Write("Your submission: ");
+            var content = Console.ReadLine();
+            var submission = new Submission
+            {
+                Id = assignment.Submissions.Any() ? assignment.Submissions.Max(s => s.Id) + 1 : 1,
+                StudentId = student.Id,
+                AssignmentId = assignment.Id,
+                Content = content,
+                SubmissionDate = DateTime.Now
+            };
+            assignment.Submissions.Add(submission);
+            Console.WriteLine("Submission recorded!");
+        }
+
+        static void ViewGrades(Student student, Course course)
+        {
+            Console.WriteLine($"\n=== Your Grades in {course.Name} ===");
+            foreach (var assignment in course.Assignments)
+            {
+                var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.Id);
+                if (submission?.Grade != null)
+                    Console.WriteLine($"{assignment.Name}: {submission.Grade}/{assignment.AvailablePoints}");
+                else
+                    Console.WriteLine($"{assignment.Name}: Not graded yet");
+            }
         }
     }
 }
