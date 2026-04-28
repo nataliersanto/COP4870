@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Maui.PoS.Views.StudentMenuView"
+             Title="Student Menu">
+
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <Label Text="Select a Student"
+               FontSize="24"
+               FontAttributes="Bold"
+               HorizontalOptions="Center"/>
+
+        <ListView x:Name="StudentListView"
+                  ItemSelected="StudentSelected">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <TextCell Text="{Binding Name}"
+                              Detail="{Binding Code}"/>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <Button Text="Back"
+                Clicked="BackClicked"
+                FontSize="16"
+                BackgroundColor="Gray"/>
+    </VerticalStackLayout>
+
+</ContentPage>

@@ -3,15 +3,23 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Maui.PoS.MainPage">
 
-    <ScrollView>
-        <VerticalStackLayout
-            Padding="30,0"
-            Spacing="25">
-            <Label Text="Welcome to the PoS System!"/>
+    <VerticalStackLayout Padding="30" Spacing="20" VerticalOptions="Center">
+        <Label Text="Learning Management System"
+               FontSize="24"
+               FontAttributes="Bold"
+               HorizontalOptions="Center"/>
 
-            <Button Text="Administrative Menu" Clicked="AdminClicked"/>
-            <Button Text="User Menu" Clicked="UserClicked"/>
-        </VerticalStackLayout>
-    </ScrollView>
+        <Label Text="Who are you?"
+               FontSize="16"
+               HorizontalOptions="Center"/>
+
+        <Button Text="Teacher"
+                Clicked="TeacherClicked"
+                FontSize="18"/>
+
+        <Button Text="Student"
+                Clicked="StudentClicked"
+                FontSize="18"/>
+    </VerticalStackLayout>
 
 </ContentPage>
