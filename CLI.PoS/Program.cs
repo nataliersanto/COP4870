@@ -658,7 +658,39 @@ namespace CLI.PoS
             });
         }
         
-        
+        static void ManageGradeRanges(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Grade Ranges: {course.Name} ===");
+                foreach (var range in course.GradeRanges.OrderByDescending(r => r.Value))
+                    Console.WriteLine($"{range.Key}: {range.Value}%+");
+
+                Console.WriteLine("U. Update a grade range");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                if (choice?.ToUpper() == "U")
+                {
+                    Console.Write("Letter grade to update (A/B/C/D/F): ");
+                    var letter = Console.ReadLine()?.ToUpper();
+                    if (letter != null && course.GradeRanges.ContainsKey(letter))
+                    {
+                        Console.Write($"New minimum percentage for {letter}: ");
+                        if (double.TryParse(Console.ReadLine(), out double newMin))
+                        {
+                            course.GradeRanges[letter] = newMin;
+                            Console.WriteLine("Updated!");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid letter grade.");
+                    }
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
         
         static void ExportGradebook(Course course)
         {
