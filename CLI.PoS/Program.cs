@@ -535,8 +535,17 @@ namespace CLI.PoS
                     }
                 } while (!qChoice.Equals("Q", StringComparison.OrdinalIgnoreCase));
             }
-
             course.Assignments.Add(assignment);
+            Console.Write("Send email notifications to enrolled students? (Y/N): "); //add email notif 
+            if (Console.ReadLine()?.ToUpper() == "Y")
+            {
+                EmailService.Current.NotifyCourseStudents(
+                    course.Roster,
+                    course.Name ?? "",
+                    assignment.Name ?? "",
+                    assignment.DueDate
+                );
+            }
             Console.WriteLine($"Created: {assignment}");
         }
 
