@@ -20,6 +20,15 @@ namespace Library.PoS.Model
             { "D", 60 },
             { "F", 0 }
         };
+        public Dictionary<string, string> GradeColors { get; set; } = new Dictionary<string, string>
+        {
+            //using standard hex colors : 
+            { "A", "#00FF00" }, // green
+            { "B", "#0000FF" }, // blue
+            { "C", "#FFFF00" }, // yellow
+            { "D", "#FFA500" }, // orange
+            { "F", "#FF0000" }  // red
+        };
         public string GetLetterGrade(double percentage)
         {
             foreach (var range in GradeRanges.OrderByDescending(r => r.Value))
@@ -28,6 +37,11 @@ namespace Library.PoS.Model
                     return range.Key;
             }
             return "F";
+        }
+
+        public string GetGradeColor(string letterGrade)
+        {
+            return GradeColors.TryGetValue(letterGrade, out var color) ? color : "#000000";
         }
         public override string ToString()
         {
@@ -68,12 +82,26 @@ namespace Library.PoS.Model
         public int AvailablePoints { get; set; }
         public DateTime DueDate { get; set; }
         public bool IsQuiz { get; set; }
-        public List<string> Questions { get; set; } = new List<string>();
+        // Each question has a prompt and a list of multiple choice options
+        public List<QuizQuestion> Questions { get; set; } = new List<QuizQuestion>();
         public List<Submission> Submissions { get; set; } = new List<Submission>();
 
         public override string ToString()
         {
-            return $"{Id}. {Name} (Due: {DueDate:MM/dd/yyyy}) [{AvailablePoints} pts]";
+            var type = IsQuiz ? "Quiz" : "Assignment";
+            return $"{Id}. [{type}] {Name} (Due: {DueDate:MM/dd/yyyy}) [{AvailablePoints} pts]";
+        }
+    }
+
+    public class QuizQuestion
+    {
+        public string? Prompt { get; set; }
+        public List<string> Choices { get; set; } = new List<string>();
+        public bool IsMultipleChoice => Choices.Any();
+
+        public override string ToString()
+        {
+            return Prompt ?? "";
         }
     }
 

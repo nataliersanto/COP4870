@@ -502,15 +502,36 @@ namespace CLI.PoS
                 var qChoice = string.Empty;
                 do
                 {
+                    //quiz is of type List<QuizQuestion>
                     Console.WriteLine("\nQuiz Questions:");
-                    assignment.Questions.Select((q, i) => $"{i + 1}. {q}").ToList().ForEach(Console.WriteLine);
-                    Console.WriteLine("A. Add Question");
+                    assignment.Questions.Select((q, i) => $"{i + 1}. {q.Prompt}").ToList().ForEach(Console.WriteLine);
+                    Console.WriteLine("A. Add Free Text Question");
+                    Console.WriteLine("M. Add Multiple Choice Question");
                     Console.WriteLine("Q. Done");
                     qChoice = Console.ReadLine();
+
                     if (qChoice?.ToUpper() == "A")
                     {
                         Console.Write("Question: ");
-                        assignment.Questions.Add(Console.ReadLine() ?? "");
+                        assignment.Questions.Add(new QuizQuestion { Prompt = Console.ReadLine() });
+                    }
+                    else if (qChoice?.ToUpper() == "M")
+                    {
+                        Console.Write("Question: ");
+                        var prompt = Console.ReadLine();
+                        var question = new QuizQuestion { Prompt = prompt };
+
+                        var addMore = true;
+                        while (addMore)
+                        {
+                            Console.Write("Add choice (or leave blank to stop): ");
+                            var choiceText = Console.ReadLine();
+                            if (string.IsNullOrEmpty(choiceText))
+                                addMore = false;
+                            else
+                                question.Choices.Add(choiceText);
+                        }
+                        assignment.Questions.Add(question);
                     }
                 } while (!qChoice.Equals("Q", StringComparison.OrdinalIgnoreCase));
             }
@@ -954,9 +975,26 @@ namespace CLI.PoS
                 var answers = new System.Text.StringBuilder();
                 for (int i = 0; i < assignment.Questions.Count; i++)
                 {
-                    Console.WriteLine($"Q{i + 1}: {assignment.Questions[i]}");
-                    Console.Write("Your answer: ");
-                    answers.AppendLine($"Q{i + 1}: {Console.ReadLine()}");
+                    var question = assignment.Questions[i];
+                    Console.WriteLine($"\nQ{i + 1}: {question.Prompt}");
+
+                    if (question.IsMultipleChoice)
+                    {
+                        // Show multiple choice options
+                        for (int j = 0; j < question.Choices.Count; j++)
+                            Console.WriteLine($"  {j + 1}. {question.Choices[j]}");
+                        Console.Write("Your answer (enter number): ");
+                        var answerIndex = Console.ReadLine();
+                        if (int.TryParse(answerIndex, out int idx) && idx > 0 && idx <= question.Choices.Count)
+                            answers.AppendLine($"Q{i + 1}: {question.Choices[idx - 1]}");
+                        else
+                            answers.AppendLine($"Q{i + 1}: {answerIndex}");
+                    }
+                    else
+                    {
+                        Console.Write("Your answer: ");
+                        answers.AppendLine($"Q{i + 1}: {Console.ReadLine()}");
+                    }
                 }
                 submission.Content = answers.ToString();
             }
