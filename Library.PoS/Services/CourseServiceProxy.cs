@@ -1,18 +1,35 @@
 using Library.PoS.Model;
+using Newtonsoft.Json;
 
 namespace Library.PoS.Services
 {
     public class CourseServiceProxy
     {
         private List<Course> courses;
+        private static string filePath = "courses.json";
 
         private CourseServiceProxy()
         {
-            courses = new List<Course>
+            if (File.Exists(filePath))
             {
-                new Course { Id = 1, Code = "COP4870", Name = "Mobile Development", Description = "Learn to build mobile apps", Semester = "Fall 2024", Section = "1" },
-                new Course { Id = 2, Code = "COP3330", Name = "Object Oriented Programming", Description = "Learn OOP concepts", Semester = "Fall 2024", Section = "2" }
-            };
+                var json = File.ReadAllText(filePath);
+                courses = JsonConvert.DeserializeObject<List<Course>>(json) ?? new List<Course>();
+            }
+            else
+            {
+                courses = new List<Course>
+                {
+                    new Course { Id = 1, Code = "COP4870", Name = "Mobile Development", Description = "Learn to build mobile apps", Semester = "Fall 2024", Section = "1" },
+                    new Course { Id = 2, Code = "COP3330", Name = "Object Oriented Programming", Description = "Learn OOP concepts", Semester = "Fall 2024", Section = "2" }
+                };
+                Save();
+            }
+        }
+
+        private void Save()
+        {
+            var json = JsonConvert.SerializeObject(courses, Formatting.Indented);
+            File.WriteAllText(filePath, json);
         }
 
         private static object _lock = new object();
@@ -49,6 +66,7 @@ namespace Library.PoS.Services
                 course.Id = NextKey;
                 courses.Add(course);
             }
+            Save();
             return course;
         }
 
@@ -56,7 +74,10 @@ namespace Library.PoS.Services
         {
             var course = courses.FirstOrDefault(c => c.Id == id);
             if (course != null)
+            {
                 courses.Remove(course);
+                Save();
+            }
             return course;
         }
 

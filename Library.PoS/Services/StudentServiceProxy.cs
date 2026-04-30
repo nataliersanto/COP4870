@@ -1,18 +1,35 @@
 using Library.PoS.Model;
+using Newtonsoft.Json;
 
 namespace Library.PoS.Services
 {
     public class StudentServiceProxy
     {
         private List<Student> students;
+        private static string filePath = "students.json";
 
         private StudentServiceProxy()
         {
-            students = new List<Student>
+            if (File.Exists(filePath))
             {
-                new Student { Id = 1, Name = "Alice Smith", Code = "asmith01", Classification = "Junior" },
-                new Student { Id = 2, Name = "Bob Jones", Code = "bjones02", Classification = "Senior" }
-            };
+                var json = File.ReadAllText(filePath);
+                students = JsonConvert.DeserializeObject<List<Student>>(json) ?? new List<Student>();
+            }
+            else
+            {
+                students = new List<Student>
+                {
+                    new Student { Id = 1, Name = "Alice Smith", Code = "asmith01", Classification = "Junior" },
+                    new Student { Id = 2, Name = "Bob Jones", Code = "bjones02", Classification = "Senior" }
+                };
+                Save();
+            }
+        }
+
+        private void Save()
+        {
+            var json = JsonConvert.SerializeObject(students, Formatting.Indented);
+            File.WriteAllText(filePath, json);
         }
 
         private static object _lock = new object();
@@ -49,6 +66,7 @@ namespace Library.PoS.Services
                 student.Id = NextKey;
                 students.Add(student);
             }
+            Save();
             return student;
         }
 
@@ -56,7 +74,10 @@ namespace Library.PoS.Services
         {
             var student = students.FirstOrDefault(s => s.Id == id);
             if (student != null)
+            {
                 students.Remove(student);
+                Save();
+            }
             return student;
         }
 

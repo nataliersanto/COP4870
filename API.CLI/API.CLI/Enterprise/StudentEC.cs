@@ -6,7 +6,7 @@ namespace API.CLI.Enterprise
     public class StudentEC
     {
         public IEnumerable<Student> Students => FakeDatabase.Current.Students;
-
+    
         public Student? GetById(int id) => FakeDatabase.Current.Students.FirstOrDefault(s => s.Id == id);
 
         public Student? AddOrUpdate(Student student)
