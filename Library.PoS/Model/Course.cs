@@ -68,12 +68,37 @@ namespace Library.PoS.Model
     {
         public int Id { get; set; }
         public string? Name { get; set; }
-        public List<string> Content { get; set; } = new List<string>();
+        public List<string> Content { get; set; } = new List<string>(); // keep for backwards compatibility
+        public List<ModuleContent> RichContent { get; set; } = new List<ModuleContent>();
 
         public override string ToString()
         {
             return $"{Id}. {Name}";
         }
+    }
+    
+    public abstract class ModuleContent // base class
+    {
+        public int Id { get; set; }
+        public string? Title { get; set; }
+        public abstract string Display();
+    }
+    public class PageContent : ModuleContent
+    {
+        public string? Body { get; set; }
+        public override string Display() => $"[Page] {Title}: {Body}"; //just shows a string of text
+    }
+    public class FileContent : ModuleContent
+    {
+        public string? FilePath { get; set; }
+        public string? FileName => Path.GetFileName(FilePath);
+        public override string Display() => $"[File] {Title}: {FileName}";
+    }
+    
+    public class AssignmentContent : ModuleContent
+    {
+        public int AssignmentId { get; set; }
+        public override string Display() => $"[Assignment] {Title} (Assignment ID: {AssignmentId})"; //embed the assignment in the module 
     }
 
     public class Assignment
