@@ -77,6 +77,7 @@ namespace CLI.PoS
                 Console.WriteLine("D. Delete Course");
                 Console.WriteLine("S. Select Course");
                 Console.WriteLine("X. Copy Course");
+                Console.WriteLine("Y. Copy Assignment Between Courses");
                 Console.WriteLine("T. Set Semester Dates");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
@@ -100,6 +101,9 @@ namespace CLI.PoS
                         break;
                     case "X":
                         CopyCourse();
+                        break;
+                    case "Y":
+                        CopyAssignmentBetweenCourses();
                         break;
                     case "T":
                         SetSemesterDates();
@@ -349,6 +353,9 @@ namespace CLI.PoS
                 Console.WriteLine("7. Export Gradebook (CSV)");
                 Console.WriteLine("8. Export Assignments");
                 Console.WriteLine("9. Import Assignments");
+                Console.WriteLine("A. Manage Announcements");
+                Console.WriteLine("E. Export Roster");
+                Console.WriteLine("I. Import Roster");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -380,6 +387,15 @@ namespace CLI.PoS
                         break;
                     case "9":
                         ImportAssignments(course);
+                        break;
+                    case "A":
+                        ManageAnnouncements(course);
+                        break;
+                    case "E":
+                        ExportRoster(course);
+                        break;
+                    case "I":
+                        ImportRoster(course);
                         break;
                     case "Q":
                         break;
@@ -787,10 +803,30 @@ namespace CLI.PoS
                 var assignment = course.Assignments.FirstOrDefault(a => a.Id == s.AssignmentId);
                 Console.WriteLine($"\nStudent: {student?.Name} | Assignment: {assignment?.Name}");
                 Console.WriteLine($"Content: {s.Content}");
-                Console.Write($"Enter grade (out of {assignment?.AvailablePoints}): ");
-                if (int.TryParse(Console.ReadLine(), out int grade)) s.Grade = grade;
-                Console.Write("Feedback: ");
-                s.Feedback = Console.ReadLine();
+                if (s.Comments.Any())
+                {
+                    Console.WriteLine("Comments:");
+                    s.Comments.ForEach(Console.WriteLine); //show existing comments 
+                }
+
+                Console.Write($"Enter grade (out of {assignment?.AvailablePoints}, or press Enter to skip): ");
+                var gradeInput = Console.ReadLine();
+                if (int.TryParse(gradeInput, out int grade)) s.Grade = grade;
+
+                Console.Write("Feedback/Comment (or press Enter to skip): ");
+                var feedback = Console.ReadLine();
+                if (!string.IsNullOrEmpty(feedback))
+                {
+                    s.Feedback = feedback;
+                    // also add as a comment
+                    s.Comments.Add(new Comment
+                    {
+                        Id = s.Comments.Any() ? s.Comments.Max(c => c.Id) + 1 : 1,
+                        AuthorName = "Instructor",
+                        Content = feedback,
+                        CreatedAt = DateTime.Now
+                    });
+                }
             });
         }
         
@@ -979,7 +1015,37 @@ namespace CLI.PoS
                 }
             } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
         }
+        static void ViewAndAddComments(Student student, Course course)
+        {
+            course.Assignments.ForEach(Console.WriteLine);
+            Console.Write("Enter Assignment ID to view comments: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var assignment = course.Assignments.FirstOrDefault(a => a.Id == id);
+            if (assignment == null) { Console.WriteLine("Not found."); return; }
 
+            var submission = assignment.Submissions.FirstOrDefault(s => s.StudentId == student.Id);
+            if (submission == null) { Console.WriteLine("You haven't submitted this assignment yet."); return; }
+
+            Console.WriteLine($"\n=== Comments for {assignment.Name} ===");
+            if (!submission.Comments.Any())
+                Console.WriteLine("No comments yet.");
+            else
+                submission.Comments.ForEach(Console.WriteLine);
+
+            Console.Write("Add a comment (or press Enter to skip): ");
+            var comment = Console.ReadLine();
+            if (!string.IsNullOrEmpty(comment))
+            {
+                submission.Comments.Add(new Comment
+                {
+                    Id = submission.Comments.Any() ? submission.Comments.Max(c => c.Id) + 1 : 1,
+                    AuthorName = student.Name ?? "Student",
+                    Content = comment,
+                    CreatedAt = DateTime.Now
+                });
+                Console.WriteLine("Comment added!");
+            }
+        }
         static void StudentMenu()
         {
             Console.WriteLine("\n=== Student Menu ===");
@@ -1027,12 +1093,22 @@ namespace CLI.PoS
             do
             {
                 Console.WriteLine($"\n=== {course.Name} ({course.Code}) ===");
-                Console.WriteLine("1. View Modules");
+
+                // Show announcements at top
+                if (course.Announcements.Any())
+                {
+                    Console.WriteLine("\n📢 ANNOUNCEMENTS:");
+                    course.Announcements.ForEach(a => Console.WriteLine($"  • {a}"));
+                }
+
+                Console.WriteLine("\n1. View Modules");
                 Console.WriteLine("2. View Assignments");
                 Console.WriteLine("3. Submit Assignment");
                 Console.WriteLine("4. View My Grades");
                 Console.WriteLine("5. View Roster");
                 Console.WriteLine("6. View Schedule");
+                Console.WriteLine("7. View Assignment Comments");
+                Console.WriteLine("U. Unenroll from this course");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -1043,6 +1119,7 @@ namespace CLI.PoS
                         {
                             Console.WriteLine($"\n{m}");
                             m.Content.ForEach(c => Console.WriteLine($"  - {c}"));
+                            m.RichContent.ForEach(c => Console.WriteLine($"  - {c.Display()}"));
                         });
                         break;
                     case "2":
@@ -1062,6 +1139,14 @@ namespace CLI.PoS
                         course.Assignments.OrderBy(a => a.DueDate)
                             .ToList().ForEach(a => Console.WriteLine($"{a.DueDate:MM/dd/yyyy} - {a.Name}"));
                         break;
+                    case "7":
+                        ViewAndAddComments(student, course);
+                        break;
+                    case "U":
+                        course.Roster.RemoveAll(s => s.Id == student.Id);
+                        CourseServiceProxy.Current.AddOrUpdate(course);
+                        Console.WriteLine($"Unenrolled from {course.Name}.");
+                        return;
                     case "Q":
                         break;
                 }
@@ -1143,6 +1228,123 @@ namespace CLI.PoS
 
             assignment.Submissions.Add(submission);
             Console.WriteLine("Submission recorded!");
+        }
+        
+        static void CopyAssignmentBetweenCourses()
+        {
+            Console.WriteLine("\n=== Copy Assignment Between Courses ===");
+            Console.WriteLine("Source course:");
+            ListCourses();
+            Console.Write("Enter Source Course ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int sourceId)) return;
+            var source = CourseServiceProxy.Current.GetById(sourceId);
+            if (source == null) { Console.WriteLine("Course not found."); return; }
+
+            source.Assignments.ForEach(Console.WriteLine);
+            Console.Write("Enter Assignment ID to copy: ");
+            if (!int.TryParse(Console.ReadLine(), out int assignId)) return;
+            var assignment = source.Assignments.FirstOrDefault(a => a.Id == assignId);
+            if (assignment == null) { Console.WriteLine("Assignment not found."); return; }
+
+            Console.WriteLine("Destination course:");
+            ListCourses();
+            Console.Write("Enter Destination Course ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int destId)) return;
+            var dest = CourseServiceProxy.Current.GetById(destId);
+            if (dest == null) { Console.WriteLine("Course not found."); return; }
+
+            var copy = new Assignment
+            {
+                Id = dest.Assignments.Any() ? dest.Assignments.Max(a => a.Id) + 1 : 1,
+                Name = assignment.Name,
+                Description = assignment.Description,
+                AvailablePoints = assignment.AvailablePoints,
+                DueDate = assignment.DueDate,
+                IsQuiz = assignment.IsQuiz,
+                Questions = new List<QuizQuestion>(assignment.Questions),
+                Submissions = new List<Submission>() // don't copy submissions
+            };
+            dest.Assignments.Add(copy);
+            CourseServiceProxy.Current.AddOrUpdate(dest);
+            Console.WriteLine($"Assignment '{copy.Name}' copied to {dest.Name}!");
+        }
+
+        static void ExportRoster(Course course)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Id,Name,Code,Classification");
+            foreach (var student in course.Roster)
+                sb.AppendLine($"{student.Id},{student.Name},{student.Code},{student.Classification}");
+
+            var fileName = $"{course.Code}_roster.csv";
+            File.WriteAllText(fileName, sb.ToString());
+            Console.WriteLine($"Roster exported to {fileName}");
+        }
+
+        static void ImportRoster(Course course)
+        {
+            Console.Write("Enter path to roster CSV file: ");
+            var filePath = Console.ReadLine();
+            if (!File.Exists(filePath)) { Console.WriteLine("File not found."); return; }
+
+            var lines = File.ReadAllLines(filePath).Skip(1);
+            var imported = 0;
+            foreach (var line in lines)
+            {
+                var parts = line.Split(',');
+                if (parts.Length < 4) continue;
+
+                // Only import if not already in roster (idempotent)
+                var existingId = int.TryParse(parts[0], out int sid) ? sid : 0;
+                if (course.Roster.Any(s => s.Id == existingId)) continue;
+
+                var student = StudentServiceProxy.Current.GetById(existingId);
+                if (student != null)
+                {
+                    course.Roster.Add(student);
+                    imported++;
+                }
+            }
+            Console.WriteLine($"Imported {imported} new student(s) to roster.");
+        }
+
+        static void ManageAnnouncements(Course course)
+        {
+            var choice = string.Empty;
+            do
+            {
+                Console.WriteLine($"\n=== Announcements: {course.Name} ===");
+                if (!course.Announcements.Any())
+                    Console.WriteLine("No announcements yet.");
+                else
+                    course.Announcements.Select((a, i) => $"{i + 1}. {a}").ToList().ForEach(Console.WriteLine);
+
+                Console.WriteLine("A. Add Announcement");
+                Console.WriteLine("D. Delete Announcement");
+                Console.WriteLine("Q. Back");
+                choice = Console.ReadLine();
+
+                switch (choice?.ToUpper())
+                {
+                    case "A":
+                        Console.Write("Announcement: ");
+                        course.Announcements.Insert(0, Console.ReadLine() ?? ""); // newest first
+                        CourseServiceProxy.Current.AddOrUpdate(course);
+                        Console.WriteLine("Announcement posted!");
+                        break;
+                    case "D":
+                        Console.Write("Announcement number to delete: ");
+                        if (int.TryParse(Console.ReadLine(), out int idx) && idx > 0 && idx <= course.Announcements.Count)
+                        {
+                            course.Announcements.RemoveAt(idx - 1);
+                            CourseServiceProxy.Current.AddOrUpdate(course);
+                            Console.WriteLine("Deleted.");
+                        }
+                        break;
+                    case "Q":
+                        break;
+                }
+            } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
         }
 
         static void ViewGrades(Student student, Course course)

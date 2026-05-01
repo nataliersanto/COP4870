@@ -11,6 +11,7 @@ namespace Library.PoS.Model
         public DateTime? SemesterEnd { get; set; }
         public string? Section { get; set; }
         public List<Student> Roster { get; set; } = new List<Student>();
+        public List<string> Announcements { get; set; } = new List<string>();
         public List<Module> Modules { get; set; } = new List<Module>();
         public List<Assignment> Assignments { get; set; } = new List<Assignment>();
         public List<AssignmentGroup> AssignmentGroups { get; set; } = new List<AssignmentGroup>();
@@ -50,7 +51,18 @@ namespace Library.PoS.Model
             return $"{Id}. [{Code}] {Name} | {Semester} Section {Section} - {Description}";
         }
     }
+    public class Comment
+    {
+        public int Id { get; set; }
+        public string? AuthorName { get; set; }
+        public string? Content { get; set; }
+        public DateTime CreatedAt { get; set; }
 
+        public override string ToString()
+        {
+            return $"[{CreatedAt:MM/dd/yyyy HH:mm}] {AuthorName}: {Content}";
+        }
+    }
     public class AssignmentGroup
     {
         public int Id { get; set; }
@@ -140,6 +152,7 @@ namespace Library.PoS.Model
         public string? Content { get; set; }
         public string? FilePath { get; set; }
         public DateTime SubmissionDate { get; set; }
+        public List<Comment> Comments { get; set; } = new List<Comment>();
         public int? Grade { get; set; }
         public string? Feedback { get; set; }
 
