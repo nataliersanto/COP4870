@@ -685,10 +685,27 @@ namespace CLI.PoS
             do
             {
                 Console.WriteLine($"\n=== Module: {module.Name} ===");
-                module.Content.Select((c, i) => $"{i + 1}. {c}").ToList().ForEach(Console.WriteLine);
-                Console.WriteLine("A. Add Content");
-                Console.WriteLine("U. Update Content");
-                Console.WriteLine("D. Remove Content");
+                
+                //legacy string content
+                if (module.Content.Any())
+                {
+                    Console.WriteLine("-- Text Content --");
+                    module.Content.Select((c, i) => $"{i + 1}. {c}").ToList().ForEach(Console.WriteLine);
+                }
+
+                //rich content
+                if (module.RichContent.Any())
+                {
+                    Console.WriteLine("-- Rich Content --");
+                    module.RichContent.ForEach(c => Console.WriteLine(c.Display()));
+                }
+
+                Console.WriteLine("A. Add Text Content");
+                Console.WriteLine("P. Add Page");
+                Console.WriteLine("F. Add File");
+                Console.WriteLine("S. Add Assignment Reference");
+                Console.WriteLine("U. Update Text Content");
+                Console.WriteLine("D. Remove Text Content");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -698,8 +715,49 @@ namespace CLI.PoS
                         Console.Write("Content: ");
                         module.Content.Add(Console.ReadLine() ?? "");
                         break;
+                    case "P":
+                        Console.Write("Page Title: ");
+                        var pageTitle = Console.ReadLine();
+                        Console.Write("Page Body: ");
+                        var pageBody = Console.ReadLine();
+                        module.RichContent.Add(new PageContent
+                        {
+                            Id = module.RichContent.Any() ? module.RichContent.Max(c => c.Id) + 1 : 1,
+                            Title = pageTitle,
+                            Body = pageBody
+                        });
+                        Console.WriteLine("Page added!");
+                        break;
+                    case "F":
+                        Console.Write("File Title: ");
+                        var fileTitle = Console.ReadLine();
+                        Console.Write("File Path: ");
+                        var filePath = Console.ReadLine();
+                        module.RichContent.Add(new FileContent
+                        {
+                            Id = module.RichContent.Any() ? module.RichContent.Max(c => c.Id) + 1 : 1,
+                            Title = fileTitle,
+                            FilePath = filePath
+                        });
+                        Console.WriteLine("File added!");
+                        break;
+                    case "S":
+                        Console.Write("Assignment Reference Title: ");
+                        var assignTitle = Console.ReadLine();
+                        Console.Write("Assignment ID to reference: ");
+                        if (int.TryParse(Console.ReadLine(), out int assignId))
+                        {
+                            module.RichContent.Add(new AssignmentContent
+                            {
+                                Id = module.RichContent.Any() ? module.RichContent.Max(c => c.Id) + 1 : 1,
+                                Title = assignTitle,
+                                AssignmentId = assignId
+                            });
+                            Console.WriteLine("Assignment reference added!");
+                        }
+                        break;
                     case "U":
-                        Console.Write("Content number to update: ");
+                        Console.Write("Text content number to update: ");
                         if (int.TryParse(Console.ReadLine(), out int idx) && idx > 0 && idx <= module.Content.Count)
                         {
                             Console.Write("New content: ");
@@ -707,7 +765,7 @@ namespace CLI.PoS
                         }
                         break;
                     case "D":
-                        Console.Write("Content number to remove: ");
+                        Console.Write("Text content number to remove: ");
                         if (int.TryParse(Console.ReadLine(), out int dIdx) && dIdx > 0 && dIdx <= module.Content.Count)
                             module.Content.RemoveAt(dIdx - 1);
                         break;
