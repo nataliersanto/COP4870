@@ -399,6 +399,7 @@ namespace CLI.PoS
                 Console.WriteLine("A. Add Student");
                 Console.WriteLine("R. List Students");
                 Console.WriteLine("D. Remove Student");
+                Console.WriteLine("S. Search Students");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -413,10 +414,33 @@ namespace CLI.PoS
                     case "D":
                         UnenrollStudent(course);
                         break;
+                    case "S":
+                        SearchRoster(course);
+                        break;
                     case "Q":
                         break;
                 }
             } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+        
+        static void SearchRoster(Course course)
+        {
+            Console.Write("Search by name or FSUID: ");
+            var query = Console.ReadLine()?.ToLower();
+    
+            var results = course.Roster
+                .Where(s => (s.Name?.ToLower().Contains(query ?? "") ?? false) 
+                            || (s.Code?.ToLower().Contains(query ?? "") ?? false))
+                .ToList();
+
+            if (!results.Any())
+            {
+                Console.WriteLine("No students found matching that search.");
+                return;
+            }
+
+            Console.WriteLine($"\nFound {results.Count} student(s):");
+            results.ForEach(Console.WriteLine);
         }
 
         static void EnrollStudent(Course course)
