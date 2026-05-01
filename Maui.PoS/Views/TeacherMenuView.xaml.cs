@@ -9,21 +9,16 @@ public partial class TeacherMenuView : ContentPage
 
     private void ManageCoursesClicked(object sender, EventArgs e)
     {
-        Shell.Current.GoToAsync("//CourseDetail");
+        Shell.Current.GoToAsync("//CourseList");
     }
 
     private void ManageStudentsClicked(object sender, EventArgs e)
     {
-        // Coming soon
+        Shell.Current.GoToAsync("//StudentManagement");
     }
 
     private void BackClicked(object sender, EventArgs e)
     {
         Shell.Current.GoToAsync("//MainPage");
-    }
-    
-    private void ManageCoursesClicked(object sender, EventArgs e)
-    {
-        Shell.Current.GoToAsync("//CourseList");
     }
 }

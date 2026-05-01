@@ -28,6 +28,10 @@
         Route="StudentMenu" />
 
     <ShellContent
+        Title="Student Management"
+        ContentTemplate="{DataTemplate views:StudentManagementView}"
+        Route="StudentManagement" />
+    <ShellContent
         Title="Course Detail"
         ContentTemplate="{DataTemplate views:CourseDetailView}"
         Route="CourseDetail" />
