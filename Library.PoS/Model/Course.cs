@@ -7,6 +7,8 @@ namespace Library.PoS.Model
         public string? Name { get; set; }
         public string? Description { get; set; }
         public string? Semester { get; set; }
+        public DateTime? SemesterStart { get; set; }
+        public DateTime? SemesterEnd { get; set; }
         public string? Section { get; set; }
         public List<Student> Roster { get; set; } = new List<Student>();
         public List<Module> Modules { get; set; } = new List<Module>();

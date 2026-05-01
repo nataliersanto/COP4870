@@ -77,6 +77,7 @@ namespace CLI.PoS
                 Console.WriteLine("D. Delete Course");
                 Console.WriteLine("S. Select Course");
                 Console.WriteLine("X. Copy Course");
+                Console.WriteLine("T. Set Semester Dates");
                 Console.WriteLine("Q. Back");
                 choice = Console.ReadLine();
 
@@ -100,6 +101,9 @@ namespace CLI.PoS
                     case "X":
                         CopyCourse();
                         break;
+                    case "T":
+                        SetSemesterDates();
+                        break;
                     case "Q":
                         break;
                     default:
@@ -107,6 +111,26 @@ namespace CLI.PoS
                         break;
                 }
             } while (!choice.Equals("Q", StringComparison.OrdinalIgnoreCase));
+        }
+        
+        static void SetSemesterDates()
+        {
+            ListCourses();
+            Console.Write("Enter Course ID: ");
+            if (!int.TryParse(Console.ReadLine(), out int id)) return;
+            var course = CourseServiceProxy.Current.GetById(id);
+            if (course == null) { Console.WriteLine("Course not found."); return; }
+
+            Console.Write("Semester Start Date (MM/DD/YYYY): ");
+            if (DateTime.TryParse(Console.ReadLine(), out DateTime start))
+                course.SemesterStart = start;
+
+            Console.Write("Semester End Date (MM/DD/YYYY): ");
+            if (DateTime.TryParse(Console.ReadLine(), out DateTime end))
+                course.SemesterEnd = end;
+
+            CourseServiceProxy.Current.AddOrUpdate(course);
+            Console.WriteLine($"Semester dates set: {course.SemesterStart:MM/dd/yyyy} - {course.SemesterEnd:MM/dd/yyyy}");
         }
 
         static void CreateCourse()
